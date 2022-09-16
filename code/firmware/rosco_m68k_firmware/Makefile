@@ -31,10 +31,39 @@ OBJECTS=bootstrap.o mfp.o duart.o rev1.o rev2.o lzgmini_68k.o	\
         decompress.o ansicon.o serial.o trap14.o cpuspeed.o		\
         cputype.o warmboot.o main1.o
 
+# System-specific default configuration options
 ifeq ($(REVISION1X),true)
-$(info === Building rosco_m68k firmware for revision 1.x board with MC$(CPU) CPU)
+HUGEROM?=false
 else
-$(info === Building rosco_m68k firmware for revision 2.x board with MC$(CPU) CPU)
+HUGEROM?=true
+endif
+ifeq ($(CPU),68000)
+WITH_ATA?=false
+WITH_VDP?=false
+WITH_XOSERA?=false
+ifeq ($(REVISION1X),true)
+WITH_68681?=false
+endif
+endif
+
+# Default configuration options for stage1
+WITH_68681?=true
+WITH_BLOCKDEV?=true
+WITH_BBSD?=true
+WITH_ATA?=true
+WITH_VDP?=true
+WITH_XOSERA?=true
+WITH_DEBUG_STUB?=true
+
+# Default configuration options for stage2
+ifeq ($(MAME),true)
+WITH_KERMIT_LOADER?=false
+WITH_BLOCKDEV_LOADER?=false
+WITH_MAME_LOADER?=true
+else
+WITH_KERMIT_LOADER?=true
+WITH_BLOCKDEV_LOADER?=true
+WITH_MAME_LOADER?=false
 endif
 
 # When MAME is true, override HUGEROM and set relevant variables
@@ -48,6 +77,23 @@ MAMESIZE=0x00100000
 HUGEROM=true
 MAMENAME=rosco_classicv2
 endif
+endif
+
+# Configuration-based defines
+ifeq ($(REVISION1X),true)
+DEFINES+=-DREVISION1X
+endif
+ifeq ($(HUGEROM),true)
+DEFINES+=-DHUGEROM
+endif
+ifeq ($(ATA_DEBUG),true)
+DEFINES+=-DATA_DEBUG
+endif
+ifeq ($(NO_TICK),true)
+DEFINES+=-DNO_TICK
+endif
+ifneq ($(WITH_68681),true)
+DEFINES+=-DNO_68681
 endif
 
 # Select linker script and set relevant variables according to ROM type
@@ -70,6 +116,12 @@ ifeq ($(MAME),true)
 FIRMWARE_TARGET=MAME ($(MAMENAME))
 else
 FIRMWARE_TARGET=$(ROMSIZETEXT) $(ROMDEVICE) ($(ROMSIZENAME))
+endif
+
+ifeq ($(REVISION1X),true)
+$(info === Building rosco_m68k firmware for revision 1.x board with MC$(CPU) CPU)
+else
+$(info === Building rosco_m68k firmware for revision 2.x board with MC$(CPU) CPU)
 endif
 
 $(info === Building rosco_m68k firmware for $(FIRMWARE_TARGET))
@@ -111,15 +163,15 @@ include easy68k/include.mk
 
 # Hardware configuration options
 export CPU ARCH TUNE
-export REVISION1X
+export REVISION1X HUGEROM
 
 # Loader configuration options
 export WITH_KERMIT_LOADER
 export WITH_BLOCKDEV_LOADER
+export WITH_MAME_LOADER
 
 # Special software configuration options
 export ATA_DEBUG
-export MAME
 
 # Recipes
 
