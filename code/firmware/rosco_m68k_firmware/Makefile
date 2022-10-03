@@ -89,6 +89,13 @@ endif
 ifeq ($(ATA_DEBUG),true)
 DEFINES+=-DATA_DEBUG
 endif
+ifeq ($(NOBANNER),true)
+DEFINES+=-DNO_BANNER
+else
+ifeq ($(LATEBANNER),true)
+DEFINES+=-DLATE_BANNER
+endif
+endif
 ifeq ($(NO_TICK),true)
 DEFINES+=-DNO_TICK
 endif
@@ -125,6 +132,14 @@ $(info === Building rosco_m68k firmware for revision 2.x board with MC$(CPU) CPU
 endif
 
 $(info === Building rosco_m68k firmware for $(FIRMWARE_TARGET))
+
+ifeq ($(NOBANNER),true)
+$(info === Building rosco_m68k firmware with no serial banner output at startup)
+else
+ifeq ($(LATEBANNER),true)
+$(info === Building rosco_m68k firmware with late banner output at startup)
+endif
+endif
 
 ifneq ($(WITH_68681),true)
 $(info === Building rosco_m68k firmware without 68681 DUART support)
