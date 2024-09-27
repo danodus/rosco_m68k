@@ -52,7 +52,7 @@ STAGE2=$(STAGE2_DIR)/$(STAGE2_FILE)
 BINARY_EVEN=$(BINARY_BASENAME)_even.$(BINARY_EXT)
 BINARY_ODD=$(BINARY_BASENAME)_odd.$(BINARY_EXT)
 
-ROMDEVICE?=SST39SF040
+ROMDEVICE?=SST39SF020
 OBJECTS=bootstrap.o mfp.o duart.o rev1.o rev2.o lzgmini_68k.o	\
 				decompress.o ansicon.o char_device.o trap14.o	\
 				cpuspeed.o cputype.o warmboot.o					\
@@ -100,7 +100,7 @@ else
 ifeq ($(HUGEROM),true)
 $(info === Building rosco_m68k firmware for 1MB SST39SF040 (HUGEROM))
 LDFLAGS:=-T ./rosco_m68k_firmware_1M.ld -Map=$(MAP)
-ROMDEVICE=SST39SF040
+ROMDEVICE=SST39SF020
 DEFINES:=$(DEFINES) -DHUGEROM
 else
 $(info === Building rosco_m68k firmware for 64KB AT28C256 (BIGROM))

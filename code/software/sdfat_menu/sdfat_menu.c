@@ -484,6 +484,14 @@ static void show_menu_files()
     }
 }
 
+static void execute_mem(uint8_t * loadstartptr)
+{
+    mcDisableInterrupts();
+    __asm__ __volatile__("move.l %0,%%a0\n" : : "g"(loadstartptr));
+    __asm__ __volatile__(" jmp (%%a0)\n" : : :);
+    __builtin_unreachable();
+}
+
 static void execute_bin_file(const char * name, uint8_t * loadstartptr)
 {
     const char * filename = fullpath(name);
@@ -568,6 +576,16 @@ static void execute_bin_file(const char * name, uint8_t * loadstartptr)
     {
         printf("...open failed!\n\n");
     }
+}
+
+static void mdump(uint32_t addr, uint32_t len)
+{
+    printf("%08lx: ", addr);
+    for (uint32_t a = addr; a < addr + len; a++) {
+        uint8_t c = *((uint8_t *)a);
+        printf("%02x ", c);
+    }
+    printf("\n");
 }
 
 // change current dir (primitive)
@@ -853,6 +871,8 @@ enum
     CMD_CD,
     CMD_MKDIR,
     CMD_RUN,
+    CMD_MDUMP,
+    CMD_MEXEC,
     CMD_DEL,
     CMD_TYPE,
     CMD_DUMP,
@@ -874,6 +894,8 @@ static struct
                         [CMD_CD]     = {"cd", NULL, "Change current dir"},
                         [CMD_MKDIR]  = {"mkdir", "md", "Make directory"},
                         [CMD_RUN]    = {"run", NULL, "Load and execute BIN file"},
+                        [CMD_MDUMP]  = {"mdump", "d", "Dump memory at a given address"},
+                        [CMD_MEXEC]  = {"mexec", NULL, "Jump to the given address"},
                         [CMD_DEL]    = {"del", "rm", "Delete file"},
                         [CMD_TYPE]   = {"type", "cat", "Display ASCII file"},
                         [CMD_DUMP]   = {"dump", NULL, "Dump file in hex and ASCII"},
@@ -887,6 +909,7 @@ static struct
 void command_prompt()
 {
     printf("\nrosco_m68k: SD Card nano-shell prompt (built " __DATE__ " " __TIME__ ")\n\n");
+    uint32_t mdump_addr = 0;
     while (true)
     {
         check_sd_card();
@@ -943,6 +966,24 @@ void command_prompt()
                 execute_bin_file(arg, load_addr);
                 break;
             }
+            case CMD_MDUMP: {
+                if (arg != NULL && arg[0] != 0)
+                {
+                    mdump_addr = (uint32_t)strtol(arg, NULL, 16);        // Use load addr from cmd line.
+                }
+                mdump(mdump_addr, 16);
+                mdump_addr += 16;
+                break;
+            }
+            case CMD_MEXEC: {
+                uint8_t * load_addr = (uint8_t *)_LOAD_ADDRESS;        // Default load address.
+                if (arg != NULL && arg[0] != 0)
+                {
+                    load_addr = (uint8_t *)strtol(arg, NULL, 16);        // Use load addr from cmd line.
+                }
+                execute_mem(load_addr);
+                break;
+            }            
             case CMD_TYPE:
                 file_operation(arg, op_type);
                 break;

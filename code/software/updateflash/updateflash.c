@@ -23,6 +23,7 @@
 #include <machine.h>
 
 #define ROM_BASE    0x00e00000
+#define CONTENT_OFFSET    0x10000
 #define EROM_BASE   ((ROM_BASE))
 #define OROM_BASE   ((ROM_BASE + 1))
 
@@ -38,11 +39,11 @@ static bool write_boot_rom(void *buffer, uint32_t size) {
 
     for (int i = 0; i < half_size; i++) {
         if (i % SST_SECT_SIZE == 0) {
-            if (!sst_sector_erase(EROM_BASE, next_sector)) {
+            if (!sst_sector_erase(EROM_BASE, (CONTENT_OFFSET / 8192) + next_sector)) {
                 goto finally;
             }
 
-            if (!sst_sector_erase(OROM_BASE, next_sector)) {
+            if (!sst_sector_erase(OROM_BASE, (CONTENT_OFFSET / 8192) + next_sector)) {
                 goto finally;
             }
 
@@ -50,12 +51,12 @@ static bool write_boot_rom(void *buffer, uint32_t size) {
         }
 
         // Write even ROM
-        if (!sst_write_byte(EROM_BASE, i, cbuf[i << 1])) {
+        if (!sst_write_byte(EROM_BASE, (CONTENT_OFFSET / 2) + i, cbuf[i << 1])) {
             goto finally;
         }
 
         // Write odd ROM
-        if (!sst_write_byte(OROM_BASE, i, cbuf[(i << 1) | 1])) {
+        if (!sst_write_byte(OROM_BASE, (CONTENT_OFFSET / 2) + i, cbuf[(i << 1) | 1])) {
             goto finally;
         }
     }
@@ -211,15 +212,8 @@ int main(int argc, char **argv) {
     }
 
     if (flash_okay) {
-        RomVersionInfo *version_info = (RomVersionInfo*)(buffer + 0x400);
-
-        if (version_info->major != 0) {
-            printf("ROM image indicates version %2x.%02x.%s ; Extended system data area: %s\n", 
-                    version_info->major, version_info->minor,
-                    version_info->is_snapshot ? "SNAPSHOT" : "RELEASE",
-                    version_info->is_extdata ? "Required" : "Not required");
-
-            if (version_info->is_huge) {                                    
+        {
+            {                                    
                 printf("\nReady to flash your rosco_m68k. This process should only take a few seconds.\n");
                 printf("\n\nNo flashing lights is normal - DO NOT TURN OFF YOUR rosco_m68k!\n\n");
                 printf("After the update is complete, your rosco_m68k should reboot automatically using\n");
@@ -250,12 +244,8 @@ int main(int argc, char **argv) {
                     // Just try rebooting instead...
                     reboot_to_init();
                 }
-            } else {
-                printf("ROM does not appear to be a flashable image (i.e. not a HUGEROM build). Cannot continue\n");
             }
-        } else {
-            printf("Oops, version check failed; Quitting while we're ahead...\n");
-        } 
+        }
     }
 
     return 0;
